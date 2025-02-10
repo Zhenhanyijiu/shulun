@@ -1,11 +1,15 @@
 package alg
 
 import (
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 )
-import "github.com/stretchr/testify/assert"
 
+/*
+go test -run=. -v
+go test -bench .
+*/
 func TestGcdEuclid(t *testing.T) {
 	assert.New(t)
 	a, b := big.NewInt(12), big.NewInt(18)

@@ -11,9 +11,11 @@ import (
 )
 
 var (
-	Zero = &big.Int{}
-	One  = &big.Int{}
-	Two  = &big.Int{}
+	Zero     = &big.Int{}
+	One      = &big.Int{}
+	Two      = &big.Int{}
+	NegOne   = &big.Int{}
+	BigPrime *big.Int
 )
 
 func init() {
@@ -21,6 +23,8 @@ func init() {
 	Zero.SetInt64(0)
 	One.SetInt64(1)
 	Two.SetInt64(2)
+	NegOne.SetInt64(-1)
+	BigPrime, _ = new(big.Int).SetString("186151550718860665121779391551741013053", 10)
 }
 
 // 欧几里得求最大公因数
@@ -41,7 +45,7 @@ func GcdEuclid(a, b *big.Int) *big.Int {
 }
 
 // 随机生成nBytes字节序列
-func GenRandomBytes(nBytes int) []byte {
+func RandomBytes(nBytes int) []byte {
 	n := (nBytes + 7) / 8
 	remain := nBytes % 8
 	ret := new(bytes.Buffer)
@@ -58,10 +62,10 @@ func GenRandomBytes(nBytes int) []byte {
 }
 
 // 随机生成指定比特个数的大整数，最高位是1
-func GenRandomBigInt(nBit int) *big.Int {
+func RandomBigInt(nBit int) *big.Int {
 	n := (nBit + 7) / 8
 	remain := nBit % 8
-	randBuf := GenRandomBytes(n)
+	randBuf := RandomBytes(n)
 	if remain > 0 {
 		randBuf[0] = (randBuf[0] & ((1 << remain) - 1)) | (1 << (remain - 1))
 	} else {
@@ -70,12 +74,35 @@ func GenRandomBigInt(nBit int) *big.Int {
 	return new(big.Int).SetBytes(randBuf)
 }
 
-// 随机生成一个大整数[0,n)=Zn
-func GenRandomFromZn(n *big.Int) *big.Int {
+// 随机生成一个大整数[0,n-1]=Zn
+func RandomFromZn(n *big.Int) *big.Int {
 	ret, _ := rand.Int(rand.Reader, n)
 	return ret
 }
-func gen_ds(N *big.Int) (*big.Int, int) {
+
+// 随机生成一个大整数[1,n-1]=Zn
+func RandomFromZnNotZero(n *big.Int) *big.Int {
+	n1 := new(big.Int).Sub(n, One)
+	ret, _ := rand.Int(rand.Reader, n1)
+	if ret.Cmp(Zero) == 0 {
+		return n1
+	}
+	return ret
+}
+func RandomFromZnNotZero2(n *big.Int) *big.Int {
+	for true {
+		ret, _ := rand.Int(rand.Reader, n)
+		if ret.Cmp(Zero) != 0 {
+			return ret
+		}
+	}
+	return nil
+}
+
+/*
+将一个整数分解成以下形式: N=d*2^s,d是奇数，s是2的幂
+*/
+func NTods(N *big.Int) (*big.Int, int) {
 	d, s := new(big.Int).Set(N), 0
 	tmp := big.NewInt(0)
 	for true {
@@ -93,13 +120,12 @@ func gen_ds(N *big.Int) (*big.Int, int) {
 // 判断一个奇数是否为素数
 func MillerRabin(N *big.Int, round int) bool {
 	if new(big.Int).Mod(N, Two).Cmp(Zero) == 0 {
-		//log.Printf("它是偶数")
 		return false
 	}
-	N_1 := new(big.Int).Sub(N, One)
-	d, s := gen_ds(N_1)
+	NMinusOne := new(big.Int).Sub(N, One)
+	d, s := NTods(NMinusOne)
 	for k := 0; k < round; {
-		a := GenRandomFromZn(N_1)
+		a := RandomFromZnNotZero(NMinusOne)
 		if a.Cmp(Two) == -1 { //a<2
 			continue
 		}
@@ -107,7 +133,7 @@ func MillerRabin(N *big.Int, round int) bool {
 		y := big.NewInt(0)
 		for i := 0; i < s; i++ {
 			y.Exp(x, Two, N)
-			if y.Cmp(One) == 0 && x.Cmp(One) != 0 && x.Cmp(N_1) != 0 {
+			if y.Cmp(One) == 0 && x.Cmp(One) != 0 && x.Cmp(NMinusOne) != 0 {
 				//log.Printf("return false here1 ...")
 				return false
 			}
@@ -122,6 +148,7 @@ func MillerRabin(N *big.Int, round int) bool {
 	return true
 }
 
+// 生成一个大素数，位数是nBit
 func GenPrime(nBit int) (*big.Int, error) {
 	if nBit < 3 {
 		panic("nBit < 3")
@@ -129,7 +156,7 @@ func GenPrime(nBit int) (*big.Int, error) {
 	c := 2
 	times := nBit * nBit / c
 	for i := 0; i < times; i++ {
-		N := GenRandomBigInt(nBit)
+		N := RandomBigInt(nBit)
 		if MillerRabin(N, 40) {
 			return N, nil
 		}
@@ -137,12 +164,35 @@ func GenPrime(nBit int) (*big.Int, error) {
 	return nil, errors.New("not found")
 }
 
-type CRT struct {
-	N     *big.Int
-	pList []*big.Int
+// 随机生成 n 个 nBits 长的素数
+func GenPrimeList(n, nBits int) ([]*big.Int, error) {
+	mList, err := genNPrime(n, nBits)
+	if err != nil {
+		return nil, errors.New("getNPrime error")
+	}
+	return mList, nil
+}
+func MulBigIntList(mList []*big.Int) *big.Int {
+	if len(mList) == 0 {
+		panic("input is null")
+	}
+	N := big.NewInt(1)
+	for i := 0; i < len(mList); i++ {
+		N.Mul(N, mList[i])
+	}
+	return N
 }
 
-func GetNPrime(n, nBits int) ([]*big.Int, error) {
+// 中国剩余定理
+type CRT struct {
+	N     *big.Int   //N=m1*m2*...*mn
+	mList []*big.Int //两两互素，本身不一定是素数
+	Mi    []*big.Int //Mi=m1*..*mi-1,mi+1*..*mn
+	MiInv []*big.Int //Mi的逆 mod mi
+}
+
+// 生成 n 个不同的素数
+func genNPrime(n, nBits int) ([]*big.Int, error) {
 	tmp := map[string]struct{}{}
 	for i := 0; i < n; {
 		x, err := GenPrime(nBits)
@@ -169,54 +219,50 @@ func GetNPrime(n, nBits int) ([]*big.Int, error) {
 	}
 	return res, nil
 }
-func NewCRT(n, nBits int) *CRT {
-	pList, err := GetNPrime(n, nBits)
-	if err != nil {
-		return nil
-	}
-	N := big.NewInt(1)
-	for i := 0; i < n; i++ {
-		N.Mul(N, pList[i])
-	}
+
+// 创建一个CRT对象
+func NewCRT(mList []*big.Int) *CRT {
+	N := MulBigIntList(mList)
+	Mi, MiInv := MiAndInvFrommList(mList)
 	return &CRT{
 		N:     N,
-		pList: pList,
+		mList: mList,
+		Mi:    Mi,
+		MiInv: MiInv,
 	}
 }
-func NewCRT2(pList []*big.Int) *CRT {
-	n := len(pList)
-	N := big.NewInt(1)
-	for i := 0; i < n; i++ {
-		N.Mul(N, pList[i])
-	}
-	return &CRT{
-		N:     N,
-		pList: pList,
-	}
+func (c *CRT) Set(mList []*big.Int) {
+	N := MulBigIntList(mList)
+	Mi, MiInv := MiAndInvFrommList(mList)
+	c.N = N
+	c.Mi = Mi
+	c.MiInv = MiInv
+	c.mList = mList
 }
-func (c *CRT) N2Zpi(x *big.Int) []*big.Int {
-	n := len(c.pList)
+func N2Zmi(x *big.Int, mlist []*big.Int) []*big.Int {
+	n := len(mlist)
 	res := make([]*big.Int, 0, n)
 	for i := 0; i < n; i++ {
-		a := new(big.Int).Mod(x, c.pList[i])
+		a := new(big.Int).Mod(x, mlist[i])
 		res = append(res, a)
 	}
 	return res
 }
-func MulMod(x, y, P *big.Int) *big.Int {
-	tmp := new(big.Int).Mul(x, y)
-	tmp.Mod(tmp, P)
-	return tmp
+
+// 中国剩余定理，Zn-->Zmi
+func (c *CRT) N2Zmi(x *big.Int) []*big.Int {
+	return N2Zmi(x, c.mList)
 }
-func (c *CRT) Zpi2N(ai []*big.Int) *big.Int {
-	Mi, MiInv := GetMiAndInvFromPList(c.pList)
+
+// 中国剩余定理，Zpi-->Zn
+func (c *CRT) Zmi2N(ai []*big.Int) *big.Int {
 	n := len(ai)
-	if n != len(c.pList) {
+	if n != len(c.mList) {
 		panic("error parameter")
 	}
 	sum := big.NewInt(0)
 	for i := 0; i < n; i++ {
-		tmp := MulMod(Mi[i], MiInv[i], c.N)
+		tmp := MulMod(c.Mi[i], c.MiInv[i], c.N)
 		tmp.Mul(tmp, ai[i])
 		tmp.Mod(tmp, c.N)
 		sum.Add(sum, tmp)
@@ -224,11 +270,32 @@ func (c *CRT) Zpi2N(ai []*big.Int) *big.Int {
 	}
 	return sum
 }
-func (c *CRT) GetMiAndInvFromPList() ([]*big.Int, []*big.Int) {
-	return GetMiAndInvFromPList(c.pList)
+
+func MulMod(x, y, P *big.Int) *big.Int {
+	tmp := new(big.Int).Mul(x, y)
+	tmp.Mod(tmp, P)
+	return tmp
+}
+
+// 从模N的既约剩余系中随机选择一个元素
+// reduced residue system ,RRS 既约剩余系
+func (c *CRT) RandomFromZnReduced() *big.Int {
+	ai := make([]*big.Int, 0, len(c.mList))
+	for i := 0; i < len(c.mList); i++ {
+		ai = append(ai, RandomFromZnNotZero(c.mList[i]))
+	}
+	z := c.Zmi2N(ai)
+	return z
+}
+
+// 获取Mi以及Mi^{-1}
+func (c *CRT) MiAndInvFrommList() ([]*big.Int, []*big.Int) {
+	return MiAndInvFrommList(c.mList)
 
 }
-func GetMiAndInvFromPList(pList []*big.Int) ([]*big.Int, []*big.Int) {
+
+// 获取Mi以及Mi^{-1}
+func MiAndInvFrommList(pList []*big.Int) ([]*big.Int, []*big.Int) {
 	n := len(pList)
 	Mi := make([]*big.Int, 0, n)
 	for i := 0; i < n; i++ {

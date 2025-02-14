@@ -29,6 +29,13 @@ ResetTimer: 在耗时准备工作后重置计时器。
 StopTimer & StartTimer: 在每次函数执行前暂停和继续计时。
 go test -v -benchmem -count=1 -cpu=1 -bench=BenchmarkGcdEuclid
 */
+func genIntListTest(n int) []int64 {
+	ret := make([]int64, 0)
+	for i := 0; i < n; i++ {
+		ret = append(ret, int64(rand.Uint32()%256))
+	}
+	return ret
+}
 func TestGcdEuclid(t *testing.T) {
 	a, b := big.NewInt(12), big.NewInt(18)
 	ret := GcdEuclid(a, b)
@@ -187,19 +194,13 @@ func BenchmarkGenPrimeList(b *testing.B) {
 		GenPrimeList(2, 256)
 	}
 }
+
 func TestMulBigIntList(t *testing.T) {
 	mlist := []*big.Int{big.NewInt(3), big.NewInt(4), big.NewInt(5)}
 	N := MulBigIntList(mlist)
 	assert.Equal(t, 0, N.Cmp(big.NewInt(3*4*5)))
-	f := func(n int) []int64 {
-		ret := make([]int64, 0)
-		for i := 0; i < n; i++ {
-			ret = append(ret, int64(rand.Uint32()%256))
-		}
-		return ret
-	}
 	for i := 0; i < 128; i++ {
-		intlist := f(5)
+		intlist := genIntListTest(5)
 		mlist := make([]*big.Int, 0)
 		s := int64(1)
 		for i2 := 0; i2 < len(intlist); i2++ {

@@ -81,7 +81,7 @@ func RandomFromZn(n *big.Int) *big.Int {
 }
 
 // 随机生成一个大整数[1,n-1]=Zn
-func RandomFromZnNotZero(n *big.Int) *big.Int {
+func RandomFromZnNotZero2(n *big.Int) *big.Int {
 	n1 := new(big.Int).Sub(n, One)
 	ret, _ := rand.Int(rand.Reader, n1)
 	if ret.Cmp(Zero) == 0 {
@@ -89,7 +89,7 @@ func RandomFromZnNotZero(n *big.Int) *big.Int {
 	}
 	return ret
 }
-func RandomFromZnNotZero2(n *big.Int) *big.Int {
+func RandomFromZnNotZero(n *big.Int) *big.Int {
 	for true {
 		ret, _ := rand.Int(rand.Reader, n)
 		if ret.Cmp(Zero) != 0 {
@@ -119,18 +119,20 @@ func NTods(N *big.Int) (*big.Int, int) {
 
 // 判断一个奇数是否为素数
 func MillerRabin(N *big.Int, round int) bool {
-	if new(big.Int).Mod(N, Two).Cmp(Zero) == 0 {
+	tmp := new(big.Int)
+	if tmp.Mod(N, Two).Cmp(Zero) == 0 {
 		return false
 	}
-	NMinusOne := new(big.Int).Sub(N, One)
+	NMinusOne := tmp.Sub(N, One)
 	d, s := NTods(NMinusOne)
+	y := big.NewInt(0)
 	for k := 0; k < round; {
-		a := RandomFromZnNotZero(NMinusOne)
-		if a.Cmp(Two) == -1 { //a<2
+		aaa := RandomFromZnNotZero(NMinusOne)
+		if aaa.Cmp(Two) == -1 { //a<2
 			continue
 		}
-		x := new(big.Int).Exp(a, d, N)
-		y := big.NewInt(0)
+		x := aaa.Exp(aaa, d, N)
+		y.SetInt64(0)
 		for i := 0; i < s; i++ {
 			y.Exp(x, Two, N)
 			if y.Cmp(One) == 0 && x.Cmp(One) != 0 && x.Cmp(NMinusOne) != 0 {
@@ -157,7 +159,7 @@ func GenPrime(nBit int) (*big.Int, error) {
 	times := nBit * nBit / c
 	for i := 0; i < times; i++ {
 		N := RandomBigInt(nBit)
-		if MillerRabin(N, 40) {
+		if MillerRabin(N, 20) {
 			return N, nil
 		}
 	}

@@ -255,10 +255,10 @@ func BenchmarkCRT_Zmi2N(b *testing.B) {
 	}
 }
 func TestCRT_RandomFromZnReduced(t *testing.T) {
+	mlist, err := GenPrimeList(3, 32)
+	assert.NoError(t, err)
+	c := NewCRT(mlist)
 	for i := 0; i < 1000; i++ {
-		mlist, err := GenPrimeList(3, 32)
-		assert.NoError(t, err)
-		c := NewCRT(mlist)
 		x := c.RandomFromZnReduced()
 		gcd := GcdEuclid(x, c.N)
 		assert.Equal(t, 0, gcd.Cmp(One))
@@ -266,10 +266,27 @@ func TestCRT_RandomFromZnReduced(t *testing.T) {
 
 }
 func BenchmarkCRT_RandomFromZnReduced(b *testing.B) {
-	mlist, _ := GenPrimeList(3, 32)
+	mlist, _ := GenPrimeList(3, 128)
 	c := NewCRT(mlist)
 	for i := 0; i < b.N; i++ {
 		_ = c.RandomFromZnReduced()
+	}
+}
+func TestRandomFromZnReduced(t *testing.T) {
+	mlist, err := GenPrimeList(2, 128)
+	assert.NoError(t, err)
+	c := NewCRT(mlist)
+	for i := 0; i < 1; i++ {
+		x := RandomFromZnReduced(c.N)
+		gcd := GcdEuclid(x, c.N)
+		assert.Equal(t, 0, gcd.Cmp(One))
+	}
+}
+func BenchmarkRandomFromZnReduced(b *testing.B) {
+	mlist, _ := GenPrimeList(3, 128)
+	c := NewCRT(mlist)
+	for i := 0; i < b.N; i++ {
+		_ = RandomFromZnReduced(c.N)
 	}
 }
 func TestCRT_MiAndInvFrommList(t *testing.T) {

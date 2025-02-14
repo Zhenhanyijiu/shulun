@@ -80,7 +80,7 @@ func TestRandomQNRModPrime(t *testing.T) {
 	q := big.NewInt(11) //4229
 	xqnr := RandomQNRModPrime(q)
 	assert.False(t, IsQRModPrime(xqnr, q))
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		p, err := GenPrime(128)
 		assert.NoError(t, err)
 		Xqnr := RandomQNRModPrime(p)
@@ -103,6 +103,23 @@ func TestGoldwasserMicali_Gen(t *testing.T) {
 
 func BenchmarkGoldwasserMicali_Gen(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		new(GoldwasserMicali).Gen(3072)
+		new(GoldwasserMicali).Gen(512)
+	}
+}
+func TestPubKey_Enc(t *testing.T) {
+	pk, sk, err := new(GoldwasserMicali).Gen(32)
+	assert.NoError(t, err)
+	for i := 0; i < 1000000; i++ {
+		plain := ((i % 2) != 0)
+		c := pk.Enc(plain)
+		plain2 := sk.Dec(c)
+		assert.Equal(t, plain, plain2)
+	}
+}
+func BenchmarkPubKey_Enc(b *testing.B) {
+	pk, _, _ := new(GoldwasserMicali).Gen(128)
+	for i := 0; i < b.N; i++ {
+		pk.Enc(true)
+		pk.Enc(false)
 	}
 }

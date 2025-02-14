@@ -29,7 +29,7 @@ func init() {
 
 // 欧几里得求最大公因数
 func GcdEuclid(a, b *big.Int) *big.Int {
-	r0, r1 := big.NewInt(0).Set(a), big.NewInt(0).Set(b)
+	r0, r1 := new(big.Int).Set(a), new(big.Int).Set(b)
 	if a.Cmp(b) == -1 {
 		r0.Set(b)
 		r1.Set(a)
@@ -112,6 +112,7 @@ func NTods(N *big.Int) (*big.Int, int) {
 		}
 		//d=d/2
 		d.Set(d.Div(d, Two))
+		//d.Div(d, Two)
 		s = s + 1
 	}
 	return nil, 0
@@ -288,6 +289,19 @@ func (c *CRT) RandomFromZnReduced() *big.Int {
 	}
 	z := c.Zmi2N(ai)
 	return z
+}
+func RandomFromZnReduced(N *big.Int) *big.Int {
+	count := 0
+	for true {
+		count++
+		x := RandomFromZnNotZero(N)
+		gcd := GcdEuclid(x, N)
+		if gcd.Cmp(One) == 0 {
+			//log.Printf("=== count:%+v\n", count)
+			return x
+		}
+	}
+	return nil
 }
 
 // 获取Mi以及Mi^{-1}

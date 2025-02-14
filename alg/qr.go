@@ -6,13 +6,14 @@ import (
 
 // 素数模的雅可比符号
 func Jacobi(a, p *big.Int) *big.Int {
-	tmp := new(big.Int).Div(new(big.Int).Sub(p, One), Two)
-	return new(big.Int).Exp(a, tmp, p)
+	tmp := new(big.Int).Sub(p, One)
+	tmp.Div(tmp, Two)
+	return tmp.Exp(a, tmp, p)
 }
 
 // 合数模N=pq形式的雅可比符号
 func JacobiNpq(a, p, q *big.Int) *big.Int {
-	return new(big.Int).Mul(Jacobi(a, p), Jacobi(a, q))
+	return Jacobi(a, p).Mul(Jacobi(a, p), Jacobi(a, q))
 }
 
 /*
@@ -70,24 +71,31 @@ func (g *GoldwasserMicali) Gen(primeBitLen int) (*PubKey, *PriKey, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	//log.Printf("GenPrimeList use time:%+v\n", time.Since(start))
 	c := NewCRT(mlist)
-	//log.Printf("NewCRT use time:%+v\n", time.Since(start))
 	xpn := RandomQNRModPrime(c.mList[0])
-	//log.Printf("RandomQNRModPrime 1 use time:%+v\n", time.Since(start))
 	xqn := RandomQNRModPrime(c.mList[1])
-	//log.Printf("RandomQNRModPrime 2 use time:%+v\n", time.Since(start))
 	z := c.Zmi2N([]*big.Int{xpn, xqn})
-	//log.Printf("Zmi2N use time:%+v\n", time.Since(start))
 	return &PubKey{c.N, z}, &PriKey{c, z}, nil
 }
 
 // 加密算法，明文只有 0 or 1
-func (g *GoldwasserMicali) Enc(plaintext bool, N, z *big.Int) *big.Int {
+// 二次剩余 对应明文 0；二次非剩余 对应明文 1；
+func (p *PubKey) Enc(plaintext bool) *big.Int {
+	x := RandomFromZnReduced(p.N)
+	c := x.Exp(x, Two, p.N)
+	//x.Mod(x, x)
+	//c := x.Mod(x, p.N)
 	if plaintext { //加密 1
-
-	} else { //加密 0
-
+		c.Mul(p.z, c)
+	} //加密 0
+	return c
+}
+func (k *PriKey) Dec(c *big.Int) bool {
+	fg := JacobiNpq(c, k.c.mList[0], k.c.mList[1])
+	plain := true
+	if fg.Cmp(One) == 0 {
+		plain = false
 	}
-	return nil
+	return plain
+
 }

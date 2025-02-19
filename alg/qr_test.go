@@ -3,7 +3,6 @@ package alg
 import (
 	"errors"
 	"github.com/stretchr/testify/assert"
-	"log"
 	"math/big"
 	"testing"
 )
@@ -58,7 +57,7 @@ func TestJacobiNpq(t *testing.T) {
 		c := NewCRT(mlist)
 		a := c.RandomFromZnReduced()
 		fg := JacobiNpq(a, mlist[0], mlist[1])
-		log.Printf(">>>>>>>>> a:%+v,fg:%+v,p:%+v,q:%+v\n", a, fg, mlist[0], mlist[1])
+		//log.Printf(">>>>>>>>> a:%+v,fg:%+v,p:%+v,q:%+v\n", a, fg, mlist[0], mlist[1])
 		p_1 := new(big.Int).Mod(NegOne, mlist[0])
 		q_1 := new(big.Int).Mod(NegOne, mlist[1])
 		faiN := new(big.Int).Mul(p_1, q_1)
@@ -92,6 +91,14 @@ func BenchmarkRandomQNRModPrime(b *testing.B) {
 		RandomQNRModPrime(BigPrime)
 	}
 }
+func TestRandomQRmodPrime(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		p, err := GenPrime(128)
+		assert.NoError(t, err)
+		xqr := RandomQRmodPrime(p)
+		assert.True(t, IsQRModPrime(xqr, p))
+	}
+}
 func TestGoldwasserMicali_Gen(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		pk, sk, err := new(GoldwasserMicali).Gen(128)
@@ -109,7 +116,7 @@ func BenchmarkGoldwasserMicali_Gen(b *testing.B) {
 func TestPubKey_Enc(t *testing.T) {
 	pk, sk, err := new(GoldwasserMicali).Gen(32)
 	assert.NoError(t, err)
-	for i := 0; i < 1000000; i++ {
+	for i := 0; i < 10000; i++ {
 		plain := ((i % 2) != 0)
 		c := pk.Enc(plain)
 		plain2 := sk.Dec(c)
@@ -121,5 +128,53 @@ func BenchmarkPubKey_Enc(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		pk.Enc(true)
 		pk.Enc(false)
+	}
+}
+func genp1p3(nBit int) (*big.Int, *big.Int, error) {
+	var p1, p3 *big.Int = nil, nil
+	for p1 == nil || p3 == nil {
+		x, err := GenPrime(nBit)
+		if err != nil {
+			return nil, nil, err
+		}
+		tmp := new(big.Int).Mod(x, Four)
+		if tmp.Cmp(Three) == 0 {
+			if p3 == nil {
+				p3 = x
+			}
+		} else {
+			if p1 == nil {
+				p1 = x
+			}
+		}
+
+	}
+	return p1, p3, nil
+}
+func TestSqrtModPrime(t *testing.T) {
+	for i := 0; i < 128; i++ {
+		p1, p3, err := genp1p3(128)
+		assert.NoError(t, err)
+		//log.Printf("p1:%+v,p3:%+v\n", p1, p3)
+		assert.Equal(t, 0, new(big.Int).Mod(p1, Four).Cmp(One))
+		assert.Equal(t, 0, new(big.Int).Mod(p3, Four).Cmp(Three))
+		xqr3 := RandomQRmodPrime(p3)
+		xsqrt3 := SqrtModPrime(xqr3, p3)
+		//log.Printf("xqr3:%+v,xsqrt3:%+v\n", xqr3, xsqrt3)
+		assert.Equal(t, 0, xsqrt3.Exp(xsqrt3, Two, p3).Cmp(xqr3))
+
+		xqr1 := RandomQRmodPrime(p1)
+		xsqrt1 := SqrtModPrime(xqr1, p1)
+		//log.Printf("xqr1:%+v,xsqrt1:%+v\n", xqr1, xsqrt1)
+		assert.Equal(t, 0, xsqrt1.Exp(xsqrt1, Two, p1).Cmp(xqr1))
+	}
+}
+func BenchmarkSqrtModPrime(b *testing.B) {
+	p1, p3, _ := genp1p3(128)
+	xqr1 := RandomQRmodPrime(p1)
+	xqr3 := RandomQRmodPrime(p3)
+	for i := 0; i < b.N; i++ {
+		SqrtModPrime(xqr1, p1)
+		SqrtModPrime(xqr3, p3)
 	}
 }

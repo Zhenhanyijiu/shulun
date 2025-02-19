@@ -50,6 +50,13 @@ func RandomQNRModPrime(p *big.Int) *big.Int {
 	panic("not found")
 }
 
+// 素数模 P 中随机生成一个二次剩余
+func RandomQRmodPrime(p *big.Int) *big.Int {
+	tmp := RandomFromZnNotZero(p)
+	//log.Printf("tmpx:%+v\n", tmp)
+	return tmp.Exp(tmp, Two, p)
+}
+
 type GoldwasserMicali struct {
 	//c *CRT
 }
@@ -98,4 +105,48 @@ func (k *PriKey) Dec(c *big.Int) bool {
 	}
 	return plain
 
+}
+
+// 找一个素数模 p 的二次非剩余
+// 求素数模的平方根,p是一个奇素数，a是一个二次剩余
+func SqrtModPrime(a, p *big.Int) *big.Int {
+	r := new(big.Int).Mod(p, Four)
+	//log.Printf(">>>>>>>>p mod4:%+v\n", r)
+	//情况1：p%4==3
+	if r.Cmp(Three) == 0 {
+		r = r.Add(p, One)
+		r.Div(r, Four)
+		//log.Printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>..>.....")
+		return r.Exp(a, r, p)
+	}
+	//log.Printf("=========== p mod 4== 1 here")
+	b := RandomQNRModPrime(p)
+	r.Sub(p, One)
+	r.Div(r, Two) //(p-1)/2
+	pMinus1Div2 := new(big.Int).Set(r)
+	_, l := NTods(r)
+	r1 := big.NewInt(0)
+	tmp, tmp1 := new(big.Int), new(big.Int)
+	for i := l; i >= 1; i-- {
+		r.Div(r, Two)
+		r1.Div(r1, Two)
+		tmp.Exp(a, r, p)
+		tmp1.Exp(b, r1, p)
+		tmp.Mul(tmp, tmp1)
+		tmp.Mod(tmp, p)
+		if tmp.Cmp(One) != 0 {
+			r1.Add(r1, pMinus1Div2)
+		}
+	}
+	tmp.Div(tmp.Add(r, One), Two)
+	tmp.Exp(a, tmp, p)
+	tmp1.Div(r1, Two)
+	tmp1.Exp(b, tmp1, p)
+	tmp.Mul(tmp, tmp1)
+	return tmp.Mod(tmp, p)
+}
+
+// 求合数模 N=pq 的平方根，利用素数模和中国剩余定理很容易得出
+func SqrtModN(a, p, q *big.Int) *big.Int {
+	return nil
 }

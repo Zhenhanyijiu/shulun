@@ -136,6 +136,16 @@ func TestNTods(t *testing.T) {
 	}
 	log.Printf("count:%+v\n", count)
 }
+func TestNTods2(t *testing.T) {
+	m, l := NTods(big.NewInt(5))
+	log.Printf("N:%+v,m:%+v,l:%+v\n", 5, m, l)
+	m, l = NTods(big.NewInt(7))
+	log.Printf("N:%+v,m:%+v,l:%+v\n", 7, m, l)
+	m, l = NTods(big.NewInt(10))
+	log.Printf("N:%+v,m:%+v,l:%+v\n", 10, m, l)
+	m, l = NTods(big.NewInt(28))
+	log.Printf("N:%+v,m:%+v,l:%+v\n", 28, m, l)
+}
 func BenchmarkNTods(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, _ = NTods(big.NewInt(100000000))

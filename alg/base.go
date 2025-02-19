@@ -14,6 +14,8 @@ var (
 	Zero     = &big.Int{}
 	One      = &big.Int{}
 	Two      = &big.Int{}
+	Three    = &big.Int{}
+	Four     = &big.Int{}
 	NegOne   = &big.Int{}
 	BigPrime *big.Int
 )
@@ -23,6 +25,8 @@ func init() {
 	Zero.SetInt64(0)
 	One.SetInt64(1)
 	Two.SetInt64(2)
+	Three.SetInt64(3)
+	Four.SetInt64(4)
 	NegOne.SetInt64(-1)
 	BigPrime, _ = new(big.Int).SetString("186151550718860665121779391551741013053", 10)
 }

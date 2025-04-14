@@ -194,8 +194,9 @@ func MulBigIntList(mList []*big.Int) *big.Int {
 type CRT struct {
 	N     *big.Int   //N=m1*m2*...*mn
 	mList []*big.Int //两两互素，本身不一定是素数
-	Mi    []*big.Int //Mi=m1*..*mi-1,mi+1*..*mn
-	MiInv []*big.Int //Mi的逆 mod mi
+	//Mi    []*big.Int //Mi=m1*..*mi-1,mi+1*..*mn
+	//MiInv []*big.Int //Mi的逆 mod mi
+	mimulmiinv []*big.Int
 }
 
 // 生成 n 个不同的素数
@@ -231,19 +232,19 @@ func genNPrime(n, nBits int) ([]*big.Int, error) {
 func NewCRT(mList []*big.Int) *CRT {
 	N := MulBigIntList(mList)
 	Mi, MiInv := MiAndInvFrommList(mList)
+	mimulmiinv := MiMulMiinv(Mi, MiInv, N)
 	return &CRT{
-		N:     N,
-		mList: mList,
-		Mi:    Mi,
-		MiInv: MiInv,
+		N:          N,
+		mList:      mList,
+		mimulmiinv: mimulmiinv,
 	}
 }
 func (c *CRT) Set(mList []*big.Int) {
 	N := MulBigIntList(mList)
 	Mi, MiInv := MiAndInvFrommList(mList)
+	mimulmiinv := MiMulMiinv(Mi, MiInv, N)
 	c.N = N
-	c.Mi = Mi
-	c.MiInv = MiInv
+	c.mimulmiinv = mimulmiinv
 	c.mList = mList
 }
 func N2Zmi(x *big.Int, mlist []*big.Int) []*big.Int {
@@ -268,9 +269,10 @@ func (c *CRT) Zmi2N(ai []*big.Int) *big.Int {
 		panic("error parameter")
 	}
 	sum := big.NewInt(0)
+	tmp := new(big.Int)
 	for i := 0; i < n; i++ {
-		tmp := MulMod(c.Mi[i], c.MiInv[i], c.N)
-		tmp.Mul(tmp, ai[i])
+		//tmp := MulMod(c.Mi[i], c.MiInv[i], c.N)
+		tmp.Mul(c.mimulmiinv[i], ai[i])
 		tmp.Mod(tmp, c.N)
 		sum.Add(sum, tmp)
 		sum.Mod(sum, c.N)
@@ -314,6 +316,7 @@ func (c *CRT) MiAndInvFrommList() ([]*big.Int, []*big.Int) {
 
 }
 
+/******************************** crt *********************************/
 // 获取Mi以及Mi^{-1}
 func MiAndInvFrommList(pList []*big.Int) ([]*big.Int, []*big.Int) {
 	n := len(pList)
@@ -333,4 +336,37 @@ func MiAndInvFrommList(pList []*big.Int) ([]*big.Int, []*big.Int) {
 		MiInv = append(MiInv, tmp)
 	}
 	return Mi, MiInv
+}
+func MiMulMiinv(Mi []*big.Int, Miinv []*big.Int, N *big.Int) []*big.Int {
+	mimulmiinv := make([]*big.Int, 0, len(Mi))
+	for i := 0; i < len(Mi); i++ {
+		tmp := new(big.Int).Mul(Mi[i], Miinv[i])
+		tmp.Mod(tmp, N)
+		mimulmiinv = append(mimulmiinv, tmp)
+	}
+	return mimulmiinv
+}
+func GenMiMulMiinv(mlist []*big.Int, N *big.Int) []*big.Int {
+	Mi, Inv := MiAndInvFrommList(mlist)
+	return MiMulMiinv(Mi, Inv, N)
+}
+func ZmiToN(ai []*big.Int, mimulmiinv []*big.Int, N *big.Int) *big.Int {
+	sum := big.NewInt(0)
+	tmp := new(big.Int)
+	for i := 0; i < len(ai); i++ {
+		tmp.Mul(ai[i], mimulmiinv[i])
+		tmp.Mod(tmp, N)
+		sum.Add(sum, tmp)
+		sum.Mod(sum, N)
+	}
+	return sum
+}
+func NToZmi(x *big.Int, mlist []*big.Int) []*big.Int {
+	n := len(mlist)
+	ai := make([]*big.Int, 0, n)
+	for i := 0; i < n; i++ {
+		a := new(big.Int).Mod(x, mlist[i])
+		ai = append(ai, a)
+	}
+	return ai
 }

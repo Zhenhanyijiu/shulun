@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log"
+	"math/big"
 	"shulun/alg"
 	"time"
 )
@@ -12,7 +13,75 @@ func main() {
 	log.Printf("------------- main ---------------\n")
 	//test_genprime(20)
 	//test_rand_prime(20)
-	test_generater(1)
+	//test_generater(1)
+	//test_ecc_pairing()
+	//test_prime_field()
+	mp := QR(big.NewInt(23))
+	fmt.Printf("mp:%+v\n", mp)
+}
+
+func test_prime_field() {
+	n := 19
+	zp_star := []int64{}
+	for i := 1; i < n; i++ {
+		zp_star = append(zp_star, int64(i))
+	}
+	fmt.Printf("zp_star:%+v\n", zp_star)
+	m := big.NewInt(int64(n))
+	for i := 0; i < len(zp_star); i++ {
+		tmp := big.NewInt(zp_star[i])
+		arr := make([]int64, 0, len(zp_star))
+		for i2 := 0; i2 < len(zp_star); i2++ {
+			tmp2 := new(big.Int).Exp(tmp, big.NewInt(int64(i2)), m)
+			arr = append(arr, tmp2.Int64())
+		}
+		fmt.Printf("%+v,%+v\n", zp_star[i], arr)
+	}
+}
+func test_ecc_pairing() {
+	n := 11
+	q := big.NewInt(int64(n))
+	coff := []*big.Int{big.NewInt(2), big.NewInt(7), big.NewInt(0), big.NewInt(1)}
+	ret := poly(coff, big.NewInt(1), q)
+	fmt.Printf("ret:%+v\n", ret)
+	ret = poly(coff, big.NewInt(2), q)
+	fmt.Printf("ret:%+v\n", ret)
+	QR := []*big.Int{}
+	for i := 0; i < n/2+1; i++ {
+		tmp := new(big.Int).Exp(big.NewInt(int64(i)), big.NewInt(2), q)
+		fmt.Printf("i:%+v,tmp:%+v\n", i, tmp)
+		QR = append(QR, tmp)
+	}
+	fmt.Printf("QR:%+v\n", QR)
+	for i := 0; i < n; i++ {
+		ret := poly(coff, big.NewInt(int64(i)), q)
+		fmt.Printf("i:%+v,ret:%+v\n", i, ret)
+	}
+}
+func poly(coff []*big.Int, x, q *big.Int) *big.Int {
+	n := len(coff)
+	tmp := new(big.Int).Set(coff[n-1])
+	for i := n - 1; i > 0; i-- {
+		//ai*x+ai_1
+		tmp.Mul(tmp, x).Mod(tmp, q)
+		tmp.Add(tmp, coff[i-1]).Mod(tmp, q)
+	}
+	return tmp
+}
+func QR(prime *big.Int) map[string]string {
+	mp := make(map[string]string)
+	zero := big.NewInt(0).String()
+	mp[zero] = zero
+	count := prime.Int64() - 1
+	x := big.NewInt(0)
+	for i := int64(1); i <= count/2; i++ {
+		x.SetInt64(i)
+		tmp := big.NewInt(i)
+		tmp.Exp(tmp, big.NewInt(2), prime)
+		mp[tmp.String()] = x.String()
+	}
+
+	return mp
 }
 
 /*
@@ -48,6 +117,10 @@ func test_generater(cyc int) {
 	for i := 0; i < fai; i++ {
 		fmt.Printf("%v^%v=%+v\n", a, i, mod_pow(a, i, N))
 	}
+	N1 := big.NewInt(int64(N))
+	faiInv := new(big.Int).ModInverse(big.NewInt(int64(fai)), N1)
+	fmt.Printf("fai inv:%+v\n", faiInv)
+
 }
 func test_genprime(cyc int) {
 	log.Printf("--------- test_genprime ----------")

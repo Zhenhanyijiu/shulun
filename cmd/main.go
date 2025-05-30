@@ -16,10 +16,80 @@ func main() {
 	//test_generater(1)
 	//test_ecc_pairing()
 	//test_prime_field()
-	mp := QR(big.NewInt(23))
-	fmt.Printf("mp:%+v\n", mp)
+	//mp := QR(big.NewInt(5))
+	//fmt.Printf("mp:%+v\n", mp)
+	EccTestTest()
+}
+func getCoffFp(cof []int64, p int64) ([]*big.Int, *big.Int) {
+	coff := make([]*big.Int, 0, len(cof))
+	for i := 0; i < len(cof); i++ {
+		coff = append(coff, big.NewInt(cof[i]))
+	}
+	return coff, big.NewInt(p)
+}
+func EccTestTest() {
+	//coff, Fp := getCoffFp([]int64{0, 1, 0, 1}, 5)
+	//coff, Fp := getCoffFp([]int64{3, 2, 0, 1}, 7)
+	coff, Fp := getCoffFp([]int64{3, 1, 0, 1}, 11)
+	//coff, Fp := getCoffFp([]int64{2, 7, 0, 1}, 11)
+	//coff, Fp := getCoffFp([]int64{7, 13, 0, 1}, 23)
+	ecc := NewEccTest(coff, Fp)
+	ecc.GenAllPoint()
+	ecc.PrintInfo()
 }
 
+type EccTest struct {
+	coff []*big.Int
+	Fp   *big.Int
+	qr   map[string]string
+	all  []*Point
+}
+type Point struct {
+	x, y *big.Int
+}
+
+func NewEccTest(coff []*big.Int, p *big.Int) *EccTest {
+	qr := QR(p)
+	return &EccTest{
+		coff: coff, Fp: p, qr: qr}
+}
+func (e *EccTest) GenAllPoint() {
+	count := e.Fp.Int64()
+	for i := int64(0); i < count; i++ {
+		x := big.NewInt(i)
+		yqr := poly(e.coff, x, e.Fp)
+		key := yqr.String()
+		val, ok := e.qr[key]
+		if ok {
+			y, fg := new(big.Int).SetString(val, 10)
+			if fg {
+				if y.Cmp(big.NewInt(0)) == 0 {
+					e.all = append(e.all, &Point{x: x, y: y})
+					continue
+				}
+				e.all = append(e.all, &Point{x: x, y: y})
+				y1 := new(big.Int).Neg(y)
+				y1.Mod(y1, e.Fp)
+				e.all = append(e.all, &Point{x: x, y: y1})
+			} else {
+				panic("error setstring!")
+			}
+		}
+
+	}
+	e.all = append(e.all, &Point{})
+}
+func (e *EccTest) PrintInfo() {
+	fmt.Printf("coff:%+v\n", e.coff)
+	fmt.Printf("Fp:%+v\n", e.Fp)
+	fmt.Printf("Qr:%+v\n", e.qr)
+
+	fmt.Printf("all point:%v\n", len(e.all))
+	for i := 0; i < len(e.all); i++ {
+		fmt.Printf("(%+v,%+v),", e.all[i].x, e.all[i].y)
+	}
+	fmt.Println()
+}
 func test_prime_field() {
 	n := 19
 	zp_star := []int64{}
